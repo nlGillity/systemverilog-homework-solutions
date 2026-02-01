@@ -61,5 +61,95 @@ module formula_1_pipe_aware_fsm
     // FPGA-Systems Magazine :: FSM :: Issue ALFA (state_0)
     // You can download this issue from https://fpga-systems.ru/fsm#state_0
 
+    // Solution:
+
+    logic res_ready;
+
+    /* ---------------------- FSM describtion --------------------- */
+
+    enum logic [1:0] {
+        IDLE      = 2'b00,
+        LOADED_A  = 2'b01,
+        LOADED_B  = 2'b10,
+        LOADED_C  = 2'b11
+    } state, next_state;
+
+    // FSM state change logic:
+
+    always_ff @(posedge clk) begin
+        if (rst) state <= IDLE;
+        else     state <= next_state;
+    end
+
+    always_comb begin
+        next_state = state;
+
+        case (state)
+            IDLE      : if ( arg_vld   ) next_state = LOADED_A;
+            LOADED_A  :                  next_state = LOADED_B;
+            LOADED_B  :                  next_state = LOADED_C;
+            LOADED_C  : if ( res_ready ) next_state = IDLE;
+        endcase
+    end
+
+    /* ----------------- ISQRT input signals logic ---------------- */
+
+    always_comb begin
+        isqrt_x_vld = 1'b0;
+        isqrt_x     = '0;
+        
+        case(state)
+            IDLE:
+                begin: choose_a
+                    isqrt_x_vld = arg_vld;
+                    isqrt_x = a;
+                end
+
+            LOADED_A:
+                begin: choose_b
+                    isqrt_x_vld = 1'b1;
+                    isqrt_x     = b;
+                end
+
+            LOADED_B:
+                begin: choose_c
+                    isqrt_x_vld = 1'b1;
+                    isqrt_x     = c;
+                end
+        endcase
+    end
+
+    /* ------------------------- Data path ------------------------ */
+
+    localparam TERMS = 3;
+
+    // Valid-registers
+
+    logic [TERMS - 1:0] buffer_vld;
+
+    always_ff @(posedge clk) begin
+        if (rst | res_vld) 
+            buffer_vld <= '0;
+        else
+            buffer_vld <= { buffer_vld[TERMS - 2:0], isqrt_y_vld };
+    end
+
+    // Data-registers
+
+    logic [17:0] buffer_data [0:TERMS - 1];
+
+    always_ff @(posedge clk) begin
+        if (isqrt_y_vld) 
+            buffer_data[0] <= isqrt_y;
+
+        for (int i = 1; i < TERMS; i++)
+            if (buffer_vld[i - 1]) 
+                buffer_data[i] <= buffer_data[i - 1] + isqrt_y;
+    end
+
+    assign res_ready = buffer_vld  [TERMS - 1];
+    assign res_vld   = res_ready;
+    assign res       = buffer_data [TERMS - 1];
+
 
 endmodule
