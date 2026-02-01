@@ -42,5 +42,56 @@ module formula_1_pipe
     // FPGA-Systems Magazine :: FSM :: Issue ALFA (state_0)
     // You can download this issue from https://fpga-systems.ru/fsm#state_0
 
+    // Solution:
+
+    logic        sqrt_vld;
+    logic [15:0] sqrt_a, sqrt_b, sqrt_c;
+
+    isqrt isqrt_a (
+        .clk(clk),
+        .rst(rst),
+
+        .x_vld(arg_vld),
+        .x(a),
+
+        .y_vld(sqrt_vld),
+        .y(sqrt_a)
+    );
+
+    isqrt isqrt_b (
+        .clk(clk),
+        .rst(rst),
+
+        .x_vld(arg_vld),
+        .x(b),
+
+        .y_vld(),
+        .y(sqrt_b)
+    );
+
+    isqrt isqrt_c (
+        .clk(clk),
+        .rst(rst),
+
+        .x_vld(arg_vld),
+        .x(c),
+
+        .y_vld(),
+        .y(sqrt_c)
+    );
+
+    logic        sqrt_reg_vld;
+    logic [17:0] sqrt_reg_sum;
+
+    always_ff @(posedge clk or posedge rst)
+        if (rst) sqrt_reg_vld <= 1'b0;
+        else     sqrt_reg_vld <= sqrt_vld;
+
+    always_ff @(posedge clk)
+        if (sqrt_vld)
+            sqrt_reg_sum <= sqrt_a + sqrt_b + sqrt_c;
+
+    assign res_vld = sqrt_reg_vld; 
+    assign res     = sqrt_reg_sum;
 
 endmodule
