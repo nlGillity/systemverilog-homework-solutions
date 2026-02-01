@@ -45,7 +45,7 @@ module sqrt_formula_distributor
 
     // Solution:
 
-    localparam NUM_MODULES   = 32;
+    localparam NUM_MODULES   = 64;
     localparam ADDRESS_WIDTH = $clog2(NUM_MODULES);
 
     /* -------------------------- Arbiter logic -------------------------- */
@@ -66,10 +66,15 @@ module sqrt_formula_distributor
 
     logic [NUM_MODULES - 1:0] input_vld;
 
-    // TODO: redesign input_vld
-    always_ff @(posedge clk)
-        if (rst) input_vld           <= '0; 
-        else     input_vld[exec_ptr] <= arg_vld;
+    always_ff @(posedge clk) begin
+        if (rst) input_vld <= '0; 
+
+        for (int i = 0; i < NUM_MODULES; i++)
+            if (input_vld[i]) 
+                input_vld[i] <= 1'b0; 
+            else if (i == exec_ptr) 
+                input_vld[i] <= arg_vld;      
+    end
 
     logic [31:0] input_a [0:NUM_MODULES - 1];
     logic [31:0] input_b [0:NUM_MODULES - 1];
