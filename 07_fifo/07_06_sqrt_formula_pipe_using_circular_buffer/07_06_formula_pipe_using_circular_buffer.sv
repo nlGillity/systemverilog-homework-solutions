@@ -42,5 +42,111 @@ module formula_2_pipe_using_circular
     // FPGA-Systems Magazine :: FSM :: Issue ALFA (state_0)
     // You can download this issue from https://fpga-systems.ru/fsm#state_0
 
+    // Solution:
+
+    localparam isqrt_stages = 5; 
+    localparam num_stages   = 3;
+    localparam last_stage   = num_stages - 1;
+
+    // ISQRT's wires
+    wire [num_stages - 1:0] sqrt_vld;
+    wire [            31:0] sqrt_res [0:num_stages - 1];
+
+    // FIFO outputs
+    wire [31:0] fifo_res [0:num_stages - 2];
+
+    // Buffer registers (cutting critical path)
+    logic [0:num_stages - 1] reg_vld;
+    logic [            31:0] reg_res [0:num_stages - 1];
+
+    always_ff @(posedge clk) begin: vld_buffer_regs
+        if (rst) reg_vld <= '0;
+
+        for (int i = 0; i < num_stages; i++)
+            reg_vld[i] <= sqrt_vld[i];
+    end
+
+    always_ff @(posedge clk) begin: res_buffer_regs
+        if (sqrt_vld[last_stage]) 
+            reg_res[last_stage] <= sqrt_res[last_stage];
+
+        for (int i = 0; i < num_stages - 1; i++)
+            if (sqrt_vld[i]) reg_res[i] <= sqrt_res[i] + fifo_res[i];
+    end
+
+    // ------------------------- FIFO modules -------------------------
+
+    circular_buffer_with_valid #(
+        .width(32), .depth(isqrt_stages)
+    ) fifo_b (
+        .clk       ( clk          ),
+        .rst       ( rst          ),
+
+        .in_valid  ( arg_vld      ),
+        .in_data   ( b            ),
+
+        .out_valid (              ),
+        .out_data  ( fifo_res [0] )
+    );
+
+    circular_buffer_with_valid #(
+        .width(32), .depth(2 * isqrt_stages + 1)
+    ) fifo_a (
+        .clk       ( clk          ),
+        .rst       ( rst          ),
+
+        .in_valid  ( arg_vld      ),
+        .in_data   ( a            ),
+
+        .out_valid (              ),
+        .out_data  ( fifo_res [1] )
+    );
+
+    // ------------------------- ISQRT modules -------------------------
+
+    isqrt #(
+        .n_pipe_stages(isqrt_stages)
+    ) isqrt_a (
+        .clk   ( clk          ),
+        .rst   ( rst          ),
+
+        .x_vld ( arg_vld      ),
+        .x     ( c            ),
+
+        .y_vld ( sqrt_vld [0] ),
+        .y     ( sqrt_res [0] )
+    );
+
+    isqrt #(
+        .n_pipe_stages(isqrt_stages)
+    ) isqrt_bc (
+        .clk   ( clk          ),
+        .rst   ( rst          ),
+
+        .x_vld ( reg_vld  [0] ),
+        .x     ( reg_res  [0] ),
+
+        .y_vld ( sqrt_vld [1] ),
+        .y     ( sqrt_res [1] )
+    );
+
+    isqrt #(
+        .n_pipe_stages(isqrt_stages)
+    ) isqrt_abc (
+        .clk   ( clk          ),
+        .rst   ( rst          ),
+
+        .x_vld ( reg_vld  [1] ),
+        .x     ( reg_res  [1] ),
+
+        .y_vld ( sqrt_vld [2] ),
+        .y     ( sqrt_res [2] )
+    );
+
+    // ----------------------------------------------------------------
+
+    assign res_vld = reg_vld[last_stage];
+    assign res     = reg_res[last_stage];
+
 
 endmodule

@@ -8,7 +8,7 @@ module ff_fifo_with_reg_empty_full
     input                      push,
     input                      pop,
     input        [width - 1:0] write_data,
-    output       [width - 1:0] read_data,
+    output logic [width - 1:0] read_data,
     output logic               empty,
     output logic               full
 );
@@ -31,26 +31,35 @@ module ff_fifo_with_reg_empty_full
     always_comb
     begin
 
-        // Example
+        // Пример
         if (push)
             wr_ptr_d = wr_ptr_q == max_ptr ? '0 : wr_ptr_q + 1'b1;
         else
             wr_ptr_d = wr_ptr_q;
 
-        // Task: Add logic for pop to make the FIFO work
+        // Ваш код здесь
+        if (pop)
+            rd_ptr_d = rd_ptr_q == max_ptr ? '0 : rd_ptr_q + 1'b1;
+        else
+            rd_ptr_d = rd_ptr_q;
 
 
         case ({ push, pop })
 
-        // Example
+        // Пример
         2'b10:
         begin
             empty_d = 1'b0;
             full_d  = wr_ptr_d == rd_ptr_q;
         end
 
-        // Task: Add { push, pop } == 2'b01 case to make the FIFO work
-
+        // Ваш код здесь
+        2'b01:
+        begin
+            empty_d = wr_ptr_d == rd_ptr_d;
+            full_d  = 1'b0;
+        end
+            
         default:
         begin
             empty_d  = empty;

@@ -3,21 +3,21 @@ module ff_fifo_pow2_depth
     parameter width = 0, depth = 0
 )
 (
-    input                clk,
-    input                rst,
-    input                push,
-    input                pop,
-    input  [width - 1:0] write_data,
-    output [width - 1:0] read_data,
-    output               empty,
-    output               full
+    input                      clk,
+    input                      rst,
+    input                      push,
+    input                      pop,
+    input        [width - 1:0] write_data,
+    output logic [width - 1:0] read_data,
+    output logic               empty,
+    output logic               full
 );
 
     localparam pointer_width          = $clog2 (depth),
                extended_pointer_width = pointer_width + 1;
 
     `ifndef SYNTHESIS
-    // Check that the depth is truly a power of two
+    // Проверить, что глубина действительно является степенью двойки
     initial assert ((1 << pointer_width) == depth);
     `endif
 
@@ -30,14 +30,19 @@ module ff_fifo_pow2_depth
 
     //--------------------------------------------------------------------------
 
-    // Example
+    // Пример
     always_ff @ (posedge clk or posedge rst)
         if (rst)
             ext_wr_ptr <= '0;
         else if (push)
             ext_wr_ptr <= ext_wr_ptr + 1'b1;
 
-    // Task: Add logic for ext_rd_ptr
+    // Ваш код здесь
+    always_ff @(posedge clk or posedge rst)
+        if (rst)
+            ext_rd_ptr <= '0;
+        else if (pop)
+            ext_rd_ptr <= ext_rd_ptr + 1'b1;
 
     //--------------------------------------------------------------------------
 
@@ -49,10 +54,13 @@ module ff_fifo_pow2_depth
 
     //--------------------------------------------------------------------------
 
-    // Example
+    // Пример
     assign full =   rd_ptr == wr_ptr
                   & ext_rd_ptr [pointer_width] != ext_wr_ptr [pointer_width];
 
-    // Task: Add logic for empty output using full as an example
+    // Ваш код здесь
+
+    assign empty = ext_rd_ptr == ext_wr_ptr
+                 & ext_rd_ptr [pointer_width] == ext_wr_ptr [pointer_width];
 
 endmodule

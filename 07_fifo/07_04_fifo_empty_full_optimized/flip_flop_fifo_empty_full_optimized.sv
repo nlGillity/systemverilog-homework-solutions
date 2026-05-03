@@ -3,14 +3,14 @@ module flip_flop_fifo_empty_full_optimized
     parameter width = 8, depth = 10
 )
 (
-    input                clk,
-    input                rst,
-    input                push,
-    input                pop,
-    input  [width - 1:0] write_data,
-    output [width - 1:0] read_data,
-    output               empty,
-    output               full
+    input                      clk,
+    input                      rst,
+    input                      push,
+    input                      pop,
+    input        [width - 1:0] write_data,
+    output logic [width - 1:0] read_data,
+    output logic               empty,
+    output logic               full
 );
 
     //------------------------------------------------------------------------
@@ -26,7 +26,7 @@ module flip_flop_fifo_empty_full_optimized
     logic [width - 1:0] data [0: depth - 1];
 
     //------------------------------------------------------------------------
-    // Example
+    // Пример
     //------------------------------------------------------------------------
 
     always_ff @ (posedge clk or posedge rst)
@@ -49,10 +49,20 @@ module flip_flop_fifo_empty_full_optimized
         end
 
     //------------------------------------------------------------------------
-    // Task: Add logic for read pointer
-    //------------------------------------------------------------------------
 
-    // TODO: Add logic for rd_ptr
+    // Ваш код здесь
+    always_ff @(posedge clk or posedge rst)
+        if (rst) begin
+            rd_ptr            <= '0;
+            rd_ptr_odd_circle <= 1'b0;
+        end
+        else if (pop)
+            if (rd_ptr == max_ptr) begin
+                rd_ptr <= '0;
+                rd_ptr_odd_circle <= ~rd_ptr_odd_circle;
+            end
+            else
+                rd_ptr <= rd_ptr + 1'b1;
 
     //------------------------------------------------------------------------
 
@@ -67,9 +77,11 @@ module flip_flop_fifo_empty_full_optimized
     wire equal_ptrs  = (wr_ptr == rd_ptr);
     wire same_circle = (wr_ptr_odd_circle == rd_ptr_odd_circle);
 
-    // Example
+    // Пример
     assign empty = equal_ptrs & same_circle;
 
-    // Task: Add logic for full output
+    // Ваш код здесь
+    assign full = (wr_ptr_odd_circle != rd_ptr_odd_circle)
+                & (rd_ptr            == wr_ptr           );
 
 endmodule
