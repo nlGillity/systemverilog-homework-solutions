@@ -141,8 +141,8 @@ module tb;
         begin
             $write (" CPU %0d:", i);
 
-            if (cluster.imAddr [i] !== prevImAddr [i])
-                $write (" %h", cluster.imAddr [i]);
+            if (cluster.regAddr [i] !== prevImAddr [i])
+                $write (" %h", cluster.regAddr [i]);
             else
                 $write ("         ");
 
@@ -151,7 +151,7 @@ module tb;
             else
                 $write ("         ");
 
-            prevImAddr  [i] <= cluster.imAddr [i];
+            prevImAddr  [i] <= cluster.regAddr [i];
             prevRegData [i] <= regData        [i];
         end
 

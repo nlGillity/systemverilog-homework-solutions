@@ -7,19 +7,17 @@ module a_plus_b_using_fifos_and_double_buffer
     input                rst,
 
     input                a_valid,
-    output               a_ready,
+    output logic         a_ready,
     input  [width - 1:0] a_data,
 
     input                b_valid,
-    output               b_ready,
+    output logic         b_ready,
     input  [width - 1:0] b_data,
 
-    output               sum_valid,
+    output logic         sum_valid,
     input                sum_ready,
-    output [width - 1:0] sum_data
+    output logic [width - 1:0] sum_data
 );
-
-    //------------------------------------------------------------------------
 
     wire               a_fifo_push;
     wire               a_fifo_pop;
@@ -42,15 +40,13 @@ module a_plus_b_using_fifos_and_double_buffer
         .full        ( a_fifo_full       )
     );
 
-    // Task: Add logic using the template below
-    //
-    // assign a_ready           = ...
-    //
-    // assign a_fifo_push       = ...
-    // assign a_fifo_write_data = ...
+    
 
+    // Ваш код здесь
 
-    //------------------------------------------------------------------------
+    assign a_ready           = ~a_fifo_full;
+    assign a_fifo_push       = a_ready & a_valid;
+    assign a_fifo_write_data = a_data;
 
     wire               b_fifo_push;
     wire               b_fifo_pop;
@@ -58,6 +54,7 @@ module a_plus_b_using_fifos_and_double_buffer
     wire [width - 1:0] b_fifo_read_data;
     wire               b_fifo_empty;
     wire               b_fifo_full;
+
 
     flip_flop_fifo_with_counter
     # (.width (width), .depth (depth))
@@ -73,27 +70,23 @@ module a_plus_b_using_fifos_and_double_buffer
         .full        ( b_fifo_full       )
     );
 
-    // Task: Add logic using the template below
-    //
-    // assign b_ready           = ...
-    //
-    // assign b_fifo_push       = ...
-    // assign b_fifo_write_data = ...
+    // Ваш код здесь
 
+    assign b_ready           = ~b_fifo_full;
+    assign b_fifo_push       = b_ready & b_valid;
+    assign b_fifo_write_data = b_data;
 
-    //------------------------------------------------------------------------
+    wire               sum_up_valid;
+    wire               sum_up_ready;
+    wire [width - 1:0] sum_up_data;
 
-    // Task: Add logic using the template below
-    //
-    // wire               sum_up_valid = ...
-    // wire               sum_up_ready;
-    // wire [width - 1:0] sum_up_data  = ...
-    //
-    // assign a_fifo_pop = ...
-    // assign b_fifo_pop = ...
+    // Ваш код здесь
+    
+    assign sum_up_valid = ~a_fifo_empty & ~b_fifo_empty;
+    assign sum_up_data  = a_fifo_read_data + b_fifo_read_data; 
 
-
-    //------------------------------------------------------------------------
+    assign a_fifo_pop   = sum_up_valid & sum_up_ready;
+    assign b_fifo_pop   = sum_up_valid & sum_up_ready;
 
     double_buffer_from_dally_harting
     # (.width (width))
