@@ -18,7 +18,7 @@ module sr_mdu
 )
 (
     input               clk,
-    input               rst,
+    input               rst, 
 
     input               i_vld,
     input        [31:0] srcA,
@@ -28,6 +28,110 @@ module sr_mdu
     output              busy
 );
 
+    localparam int WIDTH         = 32;
+    localparam int HALF_WIDTH    = WIDTH / 2; 
+    localparam int PARTIAL_WIDTH = WIDTH + HALF_WIDTH;
+
+    wire [PARTIAL_WIDTH - 1:0] ps0_delayed;
+    wire [PARTIAL_WIDTH - 1:0] ps1_delayed;
+    wire [    WIDTH / 2 - 1:0] srcA_delayed;
+    wire [        WIDTH - 1:0] srcB_delayed;
+    
+    // ==============================================================
+    // Stage 0
+    // ==============================================================
+
+    logic [WIDTH - 1:0] pp0 [0:PARTIAL_WIDTH - 1];
+
+    generate
+        for (genvar i = 0; i < WIDTH / 2; ++i)
+            assign pp0[i] = ({ WIDTH{srcB[i]} } & srcA) << i;
+    endgenerate
+
+    logic [PARTIAL_WIDTH - 1:0] ps0;
+
+    always_comb begin
+        ps0 = '0;
+        for (int i = 0; i < WIDTH / 2; ++i)
+            ps0 += pp0[i];
+    end
+    
+    shift_register #(
+        .width    ( PARTIAL_WIDTH ),
+        .depth    ( 2             )
+    ) partial_buffer_1 (
+        .clk      ( clk           ),
+        .in_data  ( ps0           ),
+        .out_data ( ps0_delayed   )
+    );
+
+    // ---------------------------------------------------------------
+
+    shift_register #(
+        .width    ( WIDTH / 2                 ),
+        .depth    ( 1                         )
+    ) srcA_buffer (
+        .clk      ( clk                       ),
+        .in_data  ( srcB[WIDTH - 1:WIDTH / 2] ),
+        .out_data ( srcB_delayed              )
+    );
+
+    shift_register #(
+        .width    ( WIDTH        ),
+        .depth    ( 1            )
+    ) srcB_buffer (
+        .clk      ( clk          ),
+        .in_data  ( srcA         ),
+        .out_data ( srcA_delayed )
+    );
+
+    // ==============================================================
+    // Stage 1
+    // ==============================================================
+
+    logic [WIDTH - 1:0] pp1 [0:PARTIAL_WIDTH - 1];
+
+    generate
+        for (genvar i = 0; i < WIDTH / 2; ++i)
+            assign pp1[i] = ({ WIDTH{srcA_delayed[i]} } & srcB_delayed) << i;
+    endgenerate
+
+    logic [PARTIAL_WIDTH - 1:0] ps1;
+
+    always_comb begin
+        ps1 = '0;
+        for (int i = 0; i < WIDTH / 2; ++i)
+            ps1 += pp1[i];
+    end
+    
+    shift_register #(
+        .width    ( PARTIAL_WIDTH ),
+        .depth    ( 1             )
+    ) partial_buffer_2 (
+        .clk      ( clk           ),
+        .in_data  ( ps1           ),
+        .out_data ( ps1_delayed   )
+    );
+
+    // ==============================================================
+    // Stage 2
+    // ==============================================================
+
+    assign result = ps0_delayed + (ps1_delayed << 1);
+
+    // ==============================================================
+    // Valid-Busy
+    // ==============================================================
+
+    logic [n_delay - 1:0] valid_buffer;
+
+    always_ff @(posedge clk)
+        if (rst) valid_buffer <= '0;
+        else     valid_buffer <= { valid_buffer[0], i_vld };
+
+    assign o_vld = valid_buffer[n_delay - 1];
+    assign busy  = (valid_buffer[0] | i_vld) & ~valid_buffer[1];
+ 
 endmodule
 
 //----------------------------------------------------------------------------

@@ -25,12 +25,25 @@ module sr_cpu
 );
     // control wires
 
+    wire        stall;
     wire        aluZero;
+    wire        mduValid; // i_valid for MDU
+    wire        mduBusy;
+    wire [31:0] mulResult;
+    wire        mulValud; // o_valid for MDU
     wire        pcSrc;
     wire        regWrite;
     wire        aluSrc;
     wire        wdSrc;
     wire  [2:0] aluControl;
+
+    assign stall = mduBusy;
+
+    // previous values
+
+    logic [4:0] rs1_prev;
+    logic [4:0] rs2_prev;
+    logic [4:0] rd_prev;
 
     // instruction decode wires
 
@@ -55,6 +68,7 @@ module sr_cpu
     (
         .clk      ( clk       ),
         .rst      ( rst       ),
+        .en       ( ~stall    ),
         .d        ( pcNext    ),
         .q        ( pc        )
     );
@@ -98,8 +112,21 @@ module sr_cpu
         .rd1        ( rd1         ),
         .rd2        ( rd2         ),
         .wd3        ( wd3         ),
-        .we3        ( regWrite
-        )
+        .we3        ( regWrite | mulValid )
+    );
+
+    // mdu
+
+    sr_mdu mdu (
+        .clk    ( clk      ),
+        .rst    ( rst      ), 
+
+        .i_vld  ( mduValid ),
+        .srcA   ( rd1      ),
+        .srcB   ( rd2      ),
+        .o_vld  ( mulValid ),
+        .result ( mulResult),
+        .busy   ( mduBusy  )
     );
 
     // alu
@@ -118,7 +145,8 @@ module sr_cpu
 
 
     assign wd3 =
-                wdSrc ? immU : aluResult;
+        wdSrc ? (mulValid ? mulResult : immU) : aluResult;
+
 
     // control
 
@@ -128,6 +156,7 @@ module sr_cpu
         .cmdF3      ( cmdF3       ),
         .cmdF7      ( cmdF7       ),
         .aluZero    ( aluZero     ),
+        .mduValid   ( mduValid    ),
         .pcSrc      ( pcSrc       ),
         .regWrite   ( regWrite    ),
         .aluSrc     ( aluSrc      ),

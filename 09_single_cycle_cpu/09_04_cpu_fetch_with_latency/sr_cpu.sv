@@ -32,6 +32,12 @@ module sr_cpu
     wire        wdSrc;
     wire  [2:0] aluControl;
 
+    // Instruction fetch
+
+    logic [31:0] instr_addr;
+    logic        instr_hazzard;
+    logic        instr_valid;
+    
     // instruction decode wires
 
     wire [ 6:0] cmdOp;
@@ -46,25 +52,44 @@ module sr_cpu
 
     // program counter
 
-    wire [31:0] pc;
-    wire [31:0] pcBranch = pc + immB;
-    wire [31:0] pcPlus4  = pc + 32'd4;
-    wire [31:0] pcNext   = pcSrc ? pcBranch : pcPlus4;
+    logic pc_enable;
 
+    always_ff @(posedge clk)
+        if (rst) pc_enable <= 1'b0;
+    else if (instr_hazzard) pc_enable <= 1'b0;
+    else  pc_enable <= 1'b1;
+
+    wire [31:0] pc;
+    wire [31:0] pcBranch  = pc + immB;
+    wire [31:0] pcPlus4   = pc + 32'd4;
+    
+    wire [31:0] pcCalc    = pcSrc ? pcBranch : pcPlus4;
+    
+    wire [31:0] pcPredict = pcPlus4;
 
     register_with_rst_and_en r_pc
     (
         .clk      ( clk       ),
         .rst      ( rst       ),
-        .d        ( pcNext    ),
-        .q        ( pc        )
+        .en       ( pc_enable      ),
+        .d        ( pcCalc    ),
+        .q        ( pc        ) 
     );
-
 
     // program memory access
 
-    assign imAddr = pc >> 2;
-    wire [31:0] instr = imData;
+    always_ff @(posedge clk)
+        if (rst) instr_addr <= pc;
+        else     instr_addr <= instr_hazzard ? pcCalc : instr_addr + 32'd4;
+    
+    assign instr_hazzard = pcSrc;
+    
+    always_ff @(posedge clk)
+        if (rst) instr_valid <= 1'b0;
+        else     instr_valid <= !instr_hazzard;
+
+    assign imAddr = instr_addr >> 2;
+    wire [31:0] instr = instr_valid ? imData : 32'd0;
 
     // instruction decode
 
