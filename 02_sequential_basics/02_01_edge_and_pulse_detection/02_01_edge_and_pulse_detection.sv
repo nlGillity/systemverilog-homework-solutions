@@ -32,5 +32,20 @@ module one_cycle_pulse_detector (input clk, rst, a, output detected);
   // Note:
   // See the testbench for the output format ($display task).
 
+  // Solution:
+  wire  pos;
+  logic a_r, pos_detect;
+
+  posedge_detector detector(.detected(pos), .*);
+
+  always_ff @(posedge clk)
+    if (rst) a_r <= '0;
+    else     a_r <=  a;
+
+  always_ff @(posedge clk)
+    if (rst) pos_detect <= '0;
+    else     pos_detect <= pos;
+
+  assign detected = ~a & pos_detect; 
 
 endmodule
