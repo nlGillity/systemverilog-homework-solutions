@@ -41,5 +41,19 @@ module detect_6_bit_sequence_using_shift_reg
   // Task:
   // Implement a module that detects the "110011" sequence
 
+  logic [5:0] seq;
+
+  always_ff @(posedge clk)
+    if (rst)
+      seq <= '0;
+    else
+      seq <= { new_bit, seq[5:1] };
+
+  assign detected =   seq[0] &
+                      seq[1] &
+                    ~ seq[2] &
+                    ~ seq[3] &
+                      seq[4] &
+                      seq[5];
 
 endmodule

@@ -19,5 +19,16 @@ module halve_tokens
     // a -> 110_011_101_000_1111
     // b -> 010_001_001_000_0101
 
+    logic cut;
+
+    always_ff @(posedge clk)
+        if (rst)
+            cut <= 1'b0;
+        else if (cut & a)
+            cut <= 1'b0;
+        else if (a)
+            cut <= a;
+
+    assign b = cut ? 1'b0 : a;
 
 endmodule

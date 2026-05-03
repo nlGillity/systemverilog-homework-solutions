@@ -25,5 +25,17 @@ module double_tokens
     // a -> 10010011000110100001100100
     // b -> 11011011110111111001111110
 
+    logic [$clog2(200) - 1:0] supply;
+    
+    always_ff @(posedge clk)
+        if (rst)
+            supply <= '0;
+        else if (a)
+            supply <= supply + 1;
+        else if (~a & supply > '0)
+            supply <= supply - 1; 
+
+    assign b        = (supply > '0) ? 'd1 : a;
+    assign overflow = (supply > 'd200);
 
 endmodule
