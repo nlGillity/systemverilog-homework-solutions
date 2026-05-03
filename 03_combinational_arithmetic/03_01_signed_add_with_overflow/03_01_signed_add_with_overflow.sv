@@ -38,5 +38,12 @@ module signed_add_with_overflow
   //
   // Otherwise the 'overflow' should be set to 0.
 
+  // Solution:
+
+  logic [3:0] result;
+  assign result = a + b;
+
+  assign overflow = (result[3] & ~a[3] & ~b[3]) | (~result[3] & a[3] & b[3]);
+  assign sum      = result;
 
 endmodule
